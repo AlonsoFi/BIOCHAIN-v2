@@ -2,6 +2,7 @@
 
 import { useWallet } from "@/hooks/wallet.hook";
 import { useWalletContext } from "@/providers/wallet.provider";
+import Link from "next/link";
 
 /**
  * Header component with wallet connection button
@@ -19,10 +20,20 @@ export const Header = () => {
   return (
     <header className="w-full border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center">
-          <h1 className="text-xl font-semibold text-black dark:text-zinc-50">
-            BioChain
-          </h1>
+        <div className="flex items-center gap-6">
+          <Link href="/">
+            <h1 className="text-xl font-semibold text-black dark:text-zinc-50 cursor-pointer hover:opacity-80">
+              BioChain
+            </h1>
+          </Link>
+          {walletAddress && (
+            <Link
+              href="/dashboard"
+              className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
+            >
+              Dashboard
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-4">

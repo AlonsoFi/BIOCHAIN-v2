@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { clinicalHistoryRouter } from "./routes/clinicalHistory";
 import { pdfRouter } from "./routes/pdf";
+import { studiesRouter } from "./routes/studies";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api/clinical-history", clinicalHistoryRouter);
 app.use("/api/pdf", pdfRouter);
+app.use("/api/studies", studiesRouter);
 
 // Health check
 app.get("/health", (req, res) => {

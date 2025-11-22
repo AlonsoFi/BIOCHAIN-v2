@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import multer from "multer";
 import { processPDF } from "../services/pdfService";
+import { addProcessedStudy } from "../services/studyService";
 
 const router = express.Router();
 
@@ -32,6 +33,16 @@ router.post("/upload", upload.single("pdf"), async (req: Request, res: Response)
       });
     }
 
+    // Obtener owner_wallet del body o headers
+    const ownerWallet = req.body.ownerWallet || req.headers["x-wallet-address"];
+
+    if (!ownerWallet) {
+      return res.status(400).json({
+        success: false,
+        error: "ownerWallet es requerido",
+      });
+    }
+
     // Procesar PDF según el diagrama
     const result = await processPDF(req.file);
 
@@ -43,9 +54,29 @@ router.post("/upload", upload.single("pdf"), async (req: Request, res: Response)
       });
     }
 
+    // Guardar estudio procesado en la base de datos (mock)
+    if (result.data) {
+      await addProcessedStudy({
+        studyHash: result.data.studyHash,
+        ownerAddress: ownerWallet as string,
+        laboratory: result.data.laboratory,
+        biomarkers: result.data.biomarkers,
+        attestationHash: result.data.attestationHash,
+      });
+    }
+
+    // TODO: Llamar a register_study() en Smart Contract StudyRegistry
+    // Por ahora solo logueamos
+    console.log("📋 Debería llamar a register_study() en StudyRegistry con:");
+    console.log("   - studyHash:", result.data?.studyHash);
+    console.log("   - ownerWallet:", ownerWallet);
+    console.log("   - timestamp:", Date.now());
+    console.log("   - labIdentifier:", result.data?.laboratory);
+    console.log("   - attestationHash:", result.data?.attestationHash);
+
     res.status(200).json({
       success: true,
-      message: "PDF procesado correctamente",
+      message: "PDF procesado correctamente y registrado",
       data: result.data,
     });
   } catch (error) {
