@@ -26,14 +26,28 @@ export const Header = () => {
               BioChain
             </h1>
           </Link>
-          {walletAddress && (
+          <nav className="hidden md:flex items-center gap-4">
             <Link
-              href="/dashboard"
+              href="/contributor"
               className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
             >
-              Dashboard
+              Contribuyente
             </Link>
-          )}
+            <Link
+              href="/researcher"
+              className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
+            >
+              Investigador
+            </Link>
+            {walletAddress && (
+              <Link
+                href="/dashboard"
+                className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50 transition-colors"
+              >
+                Dashboard
+              </Link>
+            )}
+          </nav>
         </div>
 
         <div className="flex items-center gap-4">

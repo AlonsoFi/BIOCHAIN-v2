@@ -22,6 +22,15 @@ Contrato para registrar y consultar estudios en el ledger inmutable de Soroban.
 - `get_study_metadata()` - Obtiene timestamp y lab_identifier de un estudio
 - `get_studies_by_owner()` - Obtiene todos los estudios de un owner con sus metadatos
 
+### BioCreditToken
+
+Contrato para manejar BioCredits (tokens off-chain que representan capacidad de generar reportes).
+
+**Funciones principales:**
+- `mint()` - Mintear BioCredits a una dirección
+- `balance()` - Consultar balance de BioCredits
+- `transfer()` - Transferir BioCredits entre direcciones
+
 ## 🛠️ Prerrequisitos
 
 1. **Instalar Stellar CLI (Stellar Core)**
