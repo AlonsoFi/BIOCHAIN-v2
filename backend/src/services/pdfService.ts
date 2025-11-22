@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { logInfo, logError } from "../utils/logger";
 
 /**
  * Servicio para procesar PDFs según el diagrama
@@ -48,7 +49,7 @@ const mockPostgresDB: Array<{
 function removePII(pdfBuffer: Buffer): Buffer {
   // En producción, aquí se usaría una librería real para procesar PDFs
   // y remover información personal identificable
-  console.log("🔒 Removiendo PII del PDF (mock)...");
+  logInfo("Removiendo PII del PDF (mock)");
   return pdfBuffer; // Por ahora retornamos el mismo buffer
 }
 
@@ -64,7 +65,7 @@ function detectLaboratory(pdfBuffer: Buffer): string {
     "BioReference Laboratories",
   ];
   const randomLab = mockLaboratories[Math.floor(Math.random() * mockLaboratories.length)];
-  console.log(`🏥 Laboratorio detectado (mock): ${randomLab}`);
+  logInfo(`Laboratorio detectado (mock)`, { laboratory: randomLab });
   return randomLab;
 }
 
@@ -87,7 +88,7 @@ function extractBiomarkers(pdfBuffer: Buffer): string[] {
     .sort(() => 0.5 - Math.random())
     .slice(0, Math.floor(Math.random() * 3) + 3);
   
-  console.log(`🧪 Biomarcadores extraídos (mock): ${selected.length}`);
+  logInfo(`Biomarcadores extraídos (mock)`, { count: selected.length });
   return selected;
 }
 
@@ -97,7 +98,7 @@ function extractBiomarkers(pdfBuffer: Buffer): string[] {
 function generateStudyHash(pdfBuffer: Buffer, laboratory: string, biomarkers: string[]): string {
   const content = `${laboratory}_${biomarkers.join("_")}_${pdfBuffer.length}`;
   const hash = createHash("sha256").update(content).digest("hex");
-  console.log(`🔑 Study hash generado: ${hash.substring(0, 16)}...`);
+  logInfo(`Study hash generado`, { hash: hash.substring(0, 16) + '...' });
   return hash;
 }
 
@@ -107,7 +108,7 @@ function generateStudyHash(pdfBuffer: Buffer, laboratory: string, biomarkers: st
 function generateAttestationHash(studyHash: string, timestamp: Date): string {
   const content = `${studyHash}_${timestamp.toISOString()}_attestation`;
   const hash = createHash("sha256").update(content).digest("hex");
-  console.log(`📜 Attestation hash generado: ${hash.substring(0, 16)}...`);
+  logInfo(`Attestation hash generado`, { hash: hash.substring(0, 16) + '...' });
   return hash;
 }
 
@@ -117,7 +118,7 @@ function generateAttestationHash(studyHash: string, timestamp: Date): string {
 function studyHashExists(studyHash: string): boolean {
   const exists = mockPostgresDB.some((record) => record.studyHash === studyHash);
   if (exists) {
-    console.log(`⚠️  Study hash ya existe: ${studyHash.substring(0, 16)}...`);
+    logInfo(`Study hash ya existe`, { hash: studyHash.substring(0, 16) + '...' });
   }
   return exists;
 }
@@ -137,8 +138,7 @@ function saveAnonymousMetadata(data: {
   };
   
   mockPostgresDB.push(record);
-  console.log("💾 Metadata anónima guardada en Postgres (mock)");
-  console.log(`📊 Total de registros: ${mockPostgresDB.length}`);
+  logInfo("Metadata anónima guardada en Postgres (mock)", { totalRecords: mockPostgresDB.length });
 }
 
 /**
@@ -146,13 +146,14 @@ function saveAnonymousMetadata(data: {
  */
 export async function processPDF(file: Express.Multer.File): Promise<PDFProcessingResult> {
   try {
-    console.log("\n📄 Iniciando procesamiento de PDF...");
-    console.log(`📦 Tamaño: ${file.size} bytes`);
-    console.log(`📝 Nombre: ${file.originalname}`);
+    logInfo("Iniciando procesamiento de PDF", { 
+      size: file.size, 
+      filename: file.originalname 
+    });
 
     // Paso 1: Remover PII
     const anonymizedPDF = removePII(file.buffer);
-    console.log("✅ PII removido");
+    logInfo("PII removido");
 
     // Paso 2: Detectar laboratorio (mock)
     const laboratory = detectLaboratory(anonymizedPDF);
@@ -185,9 +186,10 @@ export async function processPDF(file: Express.Multer.File): Promise<PDFProcessi
     });
 
     // Paso 8: Interactuar con Smart Contract StudyRegistry (mock)
-    console.log("📋 Interactuando con Smart Contract StudyRegistry (mock)...");
-    console.log("   - studyHash:", studyHash);
-    console.log("   - attestationHash:", attestationHash);
+    logInfo("Interactuando con Smart Contract StudyRegistry (mock)", {
+      studyHash: studyHash.substring(0, 16) + '...',
+      attestationHash: attestationHash.substring(0, 16) + '...'
+    });
 
     return {
       success: true,
@@ -206,7 +208,7 @@ export async function processPDF(file: Express.Multer.File): Promise<PDFProcessi
       },
     };
   } catch (error) {
-    console.error("❌ Error al procesar PDF:", error);
+    logError("Error al procesar PDF", error);
     throw error;
   }
 }

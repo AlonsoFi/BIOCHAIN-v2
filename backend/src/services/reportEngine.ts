@@ -7,6 +7,8 @@
  * 4. Identificar lista de study_hashes usados
  */
 
+import { logInfo } from "../utils/logger";
+
 interface ReportFilters {
   description?: string;
   laboratories?: string;
@@ -18,6 +20,7 @@ interface ReportFilters {
 
 interface GeneratedReport {
   reportId: string;
+  researcherWallet: string;
   filters: ReportFilters;
   statistics: {
     totalStudies: number;
@@ -173,40 +176,50 @@ export async function generateReport(
   filters: ReportFilters,
   researcherWallet: string
 ): Promise<GeneratedReport> {
-  console.log("\n📊 Iniciando generación de reporte...");
-  console.log("   - Filtros:", filters);
-  console.log("   - Researcher:", researcherWallet);
+  logInfo("Iniciando generación de reporte", {
+    researcherWallet: researcherWallet.substring(0, 8) + '...',
+    filters: Object.keys(filters)
+  });
 
   // Paso 1: Interpretar filtros (mock NLP)
-  console.log("🤖 Interpretando filtros (mock NLP)...");
+  logInfo("Interpretando filtros (mock NLP)");
   const interpretedFilters = interpretFilters(filters);
-  console.log("   - Laboratorios:", interpretedFilters.laboratories);
-  console.log("   - Biomarcadores:", interpretedFilters.biomarkers);
+  logInfo("Filtros interpretados", {
+    laboratories: interpretedFilters.laboratories.length,
+    biomarkers: interpretedFilters.biomarkers.length
+  });
 
   // Paso 2: Seleccionar estudios en DB (synthetic dataset)
-  console.log("📚 Seleccionando estudios en DB (synthetic dataset)...");
+  logInfo("Seleccionando estudios en DB (synthetic dataset)");
   const selectedStudies = selectStudies(interpretedFilters);
-  console.log(`   - Estudios seleccionados: ${selectedStudies.length}`);
+  logInfo("Estudios seleccionados", { count: selectedStudies.length });
 
   // Paso 3: Generar estadísticas + gráficos mock
-  console.log("📈 Generando estadísticas + gráficos mock...");
+  logInfo("Generando estadísticas + gráficos mock");
   const { statistics, charts } = generateStatisticsAndCharts(selectedStudies);
 
   // Paso 4: Identificar lista de study_hashes usados
   const usedStudyHashes = selectedStudies.map((s) => s.studyHash);
-  console.log(`   - Study hashes usados: ${usedStudyHashes.length}`);
+  logInfo("Study hashes usados", { count: usedStudyHashes.length });
 
   const reportId = `REPORT_${Date.now()}`;
 
-  console.log("✅ Reporte generado:", reportId);
+  logInfo("Reporte generado", { reportId });
 
-  return {
+  const report: GeneratedReport = {
     reportId,
+    researcherWallet,
     filters,
     statistics,
     charts,
     usedStudyHashes,
     generatedAt: new Date(),
   };
+
+  // Guardar reporte en storage
+  const { saveReport } = require("./reportStorage");
+  saveReport(report);
+
+  return report;
 }
 

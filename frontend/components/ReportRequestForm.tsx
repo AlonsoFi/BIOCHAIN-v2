@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { useWalletContext } from "@/providers/wallet.provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import toast from "react-hot-toast";
 import {
   Card,
   CardContent,
@@ -55,7 +56,7 @@ export const ReportRequestForm = ({ onReportGenerated }: { onReportGenerated: (r
 
   const onSubmit = async (data: ReportFilters) => {
     if (!walletAddress) {
-      alert("Por favor conecta tu wallet primero");
+      toast.error("Por favor conecta tu wallet primero");
       return;
     }
 
@@ -79,11 +80,14 @@ export const ReportRequestForm = ({ onReportGenerated }: { onReportGenerated: (r
         throw new Error(result.error || "Error al generar reporte");
       }
 
+      toast.success("Reporte generado correctamente");
+      
       // Notificar que el reporte se generó
       onReportGenerated(result.data.reportId);
     } catch (error: any) {
       console.error("Error generating report:", error);
-      alert(error.message || "Error al generar reporte");
+      const errorMessage = error.message || "Error al generar reporte";
+      toast.error(errorMessage);
     } finally {
       setIsGenerating(false);
     }

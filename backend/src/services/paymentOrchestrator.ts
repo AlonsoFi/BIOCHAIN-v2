@@ -5,6 +5,14 @@
  * 2. Pagar a contribuyentes: 5 USDC per study_hash
  */
 
+import { transferBioCredits, payContributors } from "./sorobanService";
+import { consumeBioCredits } from "./biocreditService";
+import { logInfo, logError, logWarn } from "../utils/logger";
+import { env } from "../config/env";
+import { CONSTANTS } from "../constants";
+
+const TREASURY_WALLET = env.TREASURY_WALLET_ADDRESS || "";
+
 interface PaymentResult {
   bioCreditConsumed: boolean;
   contributorsPaid: number;
@@ -20,17 +28,32 @@ export async function processPayment(
   reportId: string,
   usedStudyHashes: string[]
 ): Promise<PaymentResult> {
-  console.log("\n💳 Iniciando Payment Orchestrator...");
-  console.log("   - Researcher:", researcherWallet);
-  console.log("   - Report ID:", reportId);
-  console.log("   - Study hashes usados:", usedStudyHashes.length);
+  logInfo("Iniciando Payment Orchestrator", {
+    researcherWallet: researcherWallet.substring(0, 8) + '...',
+    reportId,
+    studyHashesCount: usedStudyHashes.length
+  });
 
   // Paso 1: Consumir 1 BioCredit -> transfer: researcher -> treasury
-  console.log("🪙 Consumiendo 1 BioCredit...");
-  console.log("   - Transfer: researcher -> treasury, 1 BioCredit");
-  console.log("   - TODO: Llamar a BioCreditToken.transfer() cuando el contrato esté deployado");
+  logInfo("Consumiendo 1 BioCredit");
+  
+  // Primero consumir del balance mock
+  const consumed = consumeBioCredits(researcherWallet, 1);
+  if (!consumed) {
+    throw new Error("Balance insuficiente de BioCredits");
+  }
+  
+  // Luego hacer el transfer en blockchain (si el contrato está deployado)
+  const transferResult = await transferBioCredits(researcherWallet, TREASURY_WALLET, 1);
+  
+  if (!transferResult.success) {
+    logWarn("Transfer en blockchain falló, pero balance mock ya fue consumido");
+  } else {
+    logInfo("Transfer exitoso", { txHash: transferResult.txHash });
+  }
 
   // Paso 2: Identificar contribuyentes de los study_hashes usados
+  // TODO: En producción, leer los owners desde StudyRegistry contract usando los study_hashes
   // Por ahora usamos datos mock
   const contributors = [
     "contributor_wallet_1",
@@ -38,31 +61,45 @@ export async function processPayment(
     "contributor_wallet_3",
   ].slice(0, usedStudyHashes.length);
 
-  console.log(`   - Contribuyentes a pagar: ${contributors.length}`);
+  logInfo(`Contribuyentes a pagar`, { count: contributors.length });
 
   // Paso 3: Pagar a contribuyentes: 5 USDC per study_hash
-  console.log("💰 Pagando a contribuyentes: 5 USDC per study_hash...");
-  const payments = contributors.map((contributor, index) => {
-    const amount = 5; // 5 USDC
-    console.log(`   - ${contributor}: ${amount} USDC`);
+  logInfo("Pagando a contribuyentes", { 
+    amountPerStudy: CONSTANTS.PAYMENT.USDC_PER_STUDY,
+    count: usedStudyHashes.length 
+  });
+  
+  const payments = usedStudyHashes.map((studyHash, index) => {
+    const amount = CONSTANTS.PAYMENT.USDC_PER_STUDY;
+    const contributor = contributors[index] || `contributor_${index}`;
     return {
-      contributor,
+      contributorAddress: contributor,
+      studyHash,
       amount,
-      studyHash: usedStudyHashes[index],
     };
   });
 
   const totalUSDC = payments.reduce((sum, p) => sum + p.amount, 0);
-  console.log(`   - Total a pagar: ${totalUSDC} USDC`);
+  logInfo("Total a pagar", { totalUSDC });
 
-  // TODO: Llamar a PaymentContract.pay_contributors() cuando el contrato esté deployado
-  console.log("   - TODO: Llamar a PaymentContract.pay_contributors()");
+  // Llamar a PaymentContract.pay_contributors()
+  const paymentResult = await payContributors(payments);
+  
+  if (!paymentResult.success) {
+    logError("Error al pagar a contribuyentes", new Error(paymentResult.error || 'Unknown error'));
+    throw new Error(`Error al pagar a contribuyentes: ${paymentResult.error}`);
+  }
+  
+  logInfo("Pagos exitosos", { txHash: paymentResult.txHash });
 
   return {
     bioCreditConsumed: true,
     contributorsPaid: contributors.length,
     totalUSDC,
-    transactionHashes: payments.map((_, i) => `mock_tx_${Date.now()}_${i}`),
+    transactionHashes: [
+      transferResult.txHash || "",
+      paymentResult.txHash || "",
+    ].filter(Boolean),
   };
 }
 

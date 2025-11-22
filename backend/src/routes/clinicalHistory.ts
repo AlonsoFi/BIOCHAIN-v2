@@ -1,5 +1,8 @@
 import express, { Request, Response } from "express";
 import { saveClinicalHistory } from "../services/clinicalHistoryService";
+import { validateBody } from "../utils/validation";
+import { clinicalHistorySchema } from "../utils/validation";
+import { logInfo, logError } from "../utils/logger";
 
 const router = express.Router();
 
@@ -7,17 +10,11 @@ const router = express.Router();
  * POST /api/clinical-history
  * Guarda el historial clínico en la base de datos (mock)
  */
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", validateBody(clinicalHistorySchema), async (req: Request, res: Response) => {
   try {
     const clinicalHistory = req.body;
 
-    // Validar datos básicos
-    if (!clinicalHistory.fullName || !clinicalHistory.dateOfBirth) {
-      return res.status(400).json({
-        success: false,
-        error: "Campos requeridos: fullName, dateOfBirth",
-      });
-    }
+    logInfo('Saving clinical history', { fullName: clinicalHistory.fullName });
 
     // Guardar en DB (mock)
     const savedHistory = await saveClinicalHistory(clinicalHistory);
@@ -28,11 +25,8 @@ router.post("/", async (req: Request, res: Response) => {
       data: savedHistory,
     });
   } catch (error) {
-    console.error("Error al guardar historial clínico:", error);
-    res.status(500).json({
-      success: false,
-      error: "Error interno del servidor",
-    });
+    logError("Error al guardar historial clínico", error);
+    throw error; // Dejar que el error handler lo maneje
   }
 });
 
@@ -52,11 +46,8 @@ router.get("/:id", async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error("Error al obtener historial clínico:", error);
-    res.status(500).json({
-      success: false,
-      error: "Error interno del servidor",
-    });
+    logError("Error al obtener historial clínico", error);
+    throw error; // Dejar que el error handler lo maneje
   }
 });
 

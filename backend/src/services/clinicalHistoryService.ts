@@ -3,6 +3,8 @@
  * Por ahora usa datos mock (simulación de base de datos)
  */
 
+import { logInfo } from "../utils/logger";
+
 interface ClinicalHistory {
   id?: string;
   fullName: string;
@@ -35,8 +37,10 @@ export async function saveClinicalHistory(
 
   mockDatabase.push(newHistory);
 
-  console.log("✅ Historial clínico guardado en DB (mock):", newHistory.id);
-  console.log("📊 Total de historiales:", mockDatabase.length);
+  logInfo("Historial clínico guardado en DB (mock)", {
+    id: newHistory.id,
+    total: mockDatabase.length
+  });
 
   return newHistory;
 }

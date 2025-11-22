@@ -1,26 +1,28 @@
 import { useState, useEffect } from "react";
 import { useWalletContext } from "@/providers/wallet.provider";
-import { getStudiesByOwner } from "@/lib/soroban";
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
 /**
- * Hook para obtener los estudios del contribuyente desde Soroban
+ * Hook para obtener los estudios del contribuyente
+ * Usa el backend que combina datos de StudyRegistry (blockchain) + DB
  */
 export const useStudies = () => {
   const { walletAddress } = useWalletContext();
   const [studies, setStudies] = useState<Array<{
     studyHash: string;
+    laboratory: string;
+    biomarkers: string[];
     timestamp: number;
-    labIdentifier: string;
+    attestationHash: string;
   }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Contract ID del StudyRegistry (debe ser configurado después del deploy)
-  const STUDY_REGISTRY_CONTRACT_ID = process.env.NEXT_PUBLIC_STUDY_REGISTRY_CONTRACT_ID || "";
-
   useEffect(() => {
     const fetchStudies = async () => {
-      if (!walletAddress || !STUDY_REGISTRY_CONTRACT_ID) {
+      if (!walletAddress) {
+        setStudies([]);
         return;
       }
 
@@ -28,23 +30,32 @@ export const useStudies = () => {
       setError(null);
 
       try {
-        const studiesData = await getStudiesByOwner(
-          STUDY_REGISTRY_CONTRACT_ID,
-          walletAddress
+        const response = await fetch(
+          `${BACKEND_URL}/api/studies/filtered?ownerAddress=${walletAddress}`
         );
-        setStudies(studiesData);
+        
+        if (!response.ok) {
+          throw new Error("Error al obtener estudios");
+        }
+
+        const data = await response.json();
+        if (data.success && data.data) {
+          setStudies(data.data);
+        }
       } catch (err) {
         console.error("Error fetching studies:", err);
-        setError("Error al cargar los estudios. Usando datos mock.");
-        // En caso de error, usar datos mock
-        const mockStudies = await getStudiesByOwner("", walletAddress);
-        setStudies(mockStudies);
+        setError("Error al cargar los estudios.");
+        setStudies([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchStudies();
+    
+    // Refrescar cada 10 segundos
+    const interval = setInterval(fetchStudies, 10000);
+    return () => clearInterval(interval);
   }, [walletAddress]);
 
   return { studies, loading, error };

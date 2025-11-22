@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
 /**
@@ -20,15 +21,17 @@ import { useRouter } from "next/navigation";
  */
 export default function ResearcherPage() {
   const { walletAddress } = useWalletContext();
-  const { balance, loading: balanceLoading } = useBioCredits();
+  const { balance, loading: balanceLoading, refresh } = useBioCredits();
   const [showPurchase, setShowPurchase] = useState(false);
   const [reportId, setReportId] = useState<string | null>(null);
   const router = useRouter();
 
   const handlePurchaseComplete = () => {
     setShowPurchase(false);
-    // Refrescar balance
-    window.location.reload();
+    // Forzar refresh inmediato del balance
+    setTimeout(() => {
+      refresh();
+    }, 500);
   };
 
   const handleReportGenerated = (generatedReportId: string) => {
@@ -100,11 +103,19 @@ export default function ResearcherPage() {
               Genera reportes personalizados con IA
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">BioCredits</p>
-            <p className="text-2xl font-bold">
-              {balanceLoading ? "..." : balance}
-            </p>
+          <div className="flex items-center gap-6">
+            <Button
+              variant="outline"
+              onClick={() => router.push("/researcher/history")}
+            >
+              Ver Historial
+            </Button>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">BioCredits</p>
+              <p className="text-2xl font-bold">
+                {balanceLoading ? "..." : balance}
+              </p>
+            </div>
           </div>
         </div>
 

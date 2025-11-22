@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import toast from "react-hot-toast";
 
 /**
  * Componente para comprar BioCredits
@@ -23,13 +24,15 @@ export const BioCreditPurchase = ({ onPurchaseComplete }: { onPurchaseComplete: 
 
   const handlePurchase = async () => {
     if (!walletAddress) {
-      alert("Por favor conecta tu wallet primero");
+      toast.error("Por favor conecta tu wallet primero");
       return;
     }
 
     setIsPurchasing(true);
 
     try {
+      const amount = 1; // 1 BioCredit = $60
+      
       // Simular compra: fiat -> USDC -> BioCredit
       const response = await fetch(`${BACKEND_URL}/api/biocredit/purchase`, {
         method: "POST",
@@ -38,7 +41,7 @@ export const BioCreditPurchase = ({ onPurchaseComplete }: { onPurchaseComplete: 
         },
         body: JSON.stringify({
           walletAddress,
-          amount: 1, // 1 BioCredit = $60
+          amount,
         }),
       });
 
@@ -48,11 +51,14 @@ export const BioCreditPurchase = ({ onPurchaseComplete }: { onPurchaseComplete: 
         throw new Error(data.error || "Error al comprar BioCredit");
       }
 
+      toast.success(`¡${amount} BioCredit(s) comprado(s) correctamente!`);
+      
       // Notificar que la compra se completó
       onPurchaseComplete();
     } catch (error: any) {
       console.error("Error purchasing BioCredit:", error);
-      alert(error.message || "Error al comprar BioCredit");
+      const errorMessage = error.message || "Error al comprar BioCredit";
+      toast.error(errorMessage);
     } finally {
       setIsPurchasing(false);
     }

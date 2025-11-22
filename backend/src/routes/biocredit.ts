@@ -1,5 +1,10 @@
 import express, { Request, Response } from "express";
-import { purchaseBioCredit } from "../services/biocreditService";
+import { purchaseBioCredit, getMockBalance } from "../services/biocreditService";
+import { getBioCreditBalance } from "../services/sorobanService";
+import { validateBody, stellarAddressSchema } from "../utils/validation";
+import { bioCreditPurchaseSchema } from "../utils/validation";
+import { logInfo, logError } from "../utils/logger";
+import { ValidationError } from "../utils/errors";
 
 const router = express.Router();
 
@@ -8,19 +13,22 @@ const router = express.Router();
  * Simula compra fiat -> USDC -> BioCredit
  * Mint BioCredit al wallet del investigador
  */
-router.post("/purchase", async (req: Request, res: Response) => {
+router.post("/purchase", validateBody(bioCreditPurchaseSchema), async (req: Request, res: Response) => {
   try {
     const { walletAddress, amount } = req.body;
 
-    if (!walletAddress) {
-      return res.status(400).json({
-        success: false,
-        error: "walletAddress es requerido",
-      });
-    }
+    logInfo('Processing BioCredit purchase', { 
+      walletAddress: walletAddress.substring(0, 8) + '...',
+      amount 
+    });
 
     // Simular compra: fiat -> USDC -> BioCredit
     const result = await purchaseBioCredit(walletAddress, amount || 1);
+
+    logInfo('BioCredit purchase successful', { 
+      walletAddress: walletAddress.substring(0, 8) + '...',
+      txHash: result.transactionHash 
+    });
 
     res.status(200).json({
       success: true,
@@ -28,11 +36,8 @@ router.post("/purchase", async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    console.error("Error al comprar BioCredit:", error);
-    res.status(500).json({
-      success: false,
-      error: "Error interno del servidor",
-    });
+    logError("Error al comprar BioCredit", error);
+    throw error; // Dejar que el error handler lo maneje
   }
 });
 
@@ -44,18 +49,27 @@ router.get("/balance/:address", async (req: Request, res: Response) => {
   try {
     const { address } = req.params;
     
-    // Por ahora retornamos mock
-    // TODO: Consultar contrato real cuando esté deployado
+    // Validar formato de Stellar address
+    try {
+      stellarAddressSchema.parse(address);
+    } catch (error) {
+      throw new ValidationError("Formato de wallet address inválido");
+    }
+    
+    // Consultar balance desde el contrato BioCreditToken
+    const contractBalance = await getBioCreditBalance(address);
+    
+    // Si el contrato no está deployado, usar balance mock
+    const mockBalance = getMockBalance(address);
+    const balance = contractBalance > 0 ? contractBalance : mockBalance;
+    
     res.json({
       success: true,
-      balance: 0, // Mock: retornar 0 para forzar compra
+      balance,
     });
   } catch (error) {
-    console.error("Error al obtener balance:", error);
-    res.status(500).json({
-      success: false,
-      error: "Error interno del servidor",
-    });
+    logError("Error al obtener balance", error);
+    throw error; // Dejar que el error handler lo maneje
   }
 });
 

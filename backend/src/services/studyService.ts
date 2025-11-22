@@ -3,6 +3,8 @@
  * Según el diagrama: Backend filtra y envía al Frontend
  */
 
+import { logInfo } from "../utils/logger";
+
 interface FilteredStudy {
   studyHash: string;
   laboratory: string;
@@ -100,6 +102,9 @@ export async function addProcessedStudy(study: {
     processedAt: new Date(),
   });
 
-  console.log("✅ Estudio agregado a la base de datos (mock):", study.studyHash);
+  logInfo("Estudio agregado a la base de datos (mock)", {
+    studyHash: study.studyHash.substring(0, 16) + '...',
+    total: mockStudiesDB.length
+  });
 }
 

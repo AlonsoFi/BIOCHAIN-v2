@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 /**
  * Componente para subir PDF de estudio
@@ -67,12 +68,16 @@ export const PDFUploadForm = () => {
         throw new Error(data.error || "Error al subir el PDF");
       }
 
+      toast.success("PDF procesado correctamente");
+      
       // Redirigir a página de éxito con los datos
       const studyHash = data.data?.studyHash || "";
       router.push(`/success?studyHash=${studyHash}&laboratory=${data.data?.laboratory || ""}`);
     } catch (err: any) {
       console.error("Error uploading PDF:", err);
-      setError(err.message || "Error al subir el PDF. Por favor intenta nuevamente.");
+      const errorMessage = err.message || "Error al subir el PDF. Por favor intenta nuevamente.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsUploading(false);
     }
